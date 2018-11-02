@@ -2,20 +2,50 @@
 {{#model}}
 -module({{classname}}).
 
--export([encode/1]).
+-export([ decode/1
+        , encode/1]).
 
--export_type([{{classname}}/0]).
+-export_type([type/0]).
 
--type {{classname}}() ::
-    #{ {{#vars}}'{{name}}' {{#required}}:={{/required}}{{^required}}=>{{/required}} {{{dataType}}}{{#hasMore}},
+{{^isContainer}}
+-type type() ::
+    #{ {{#vars}}'{{name}}' {{#required}}:={{/required}}{{^required}}=>{{/required}}
+          {{{dataType}}}{{#hasMore}},
        {{/hasMore}}{{/vars}}
      }.
 
-encode(#{ {{#vars}}'{{name}}' := {{{nameInCamelCase}}}{{#hasMore}},
-          {{/hasMore}}{{/vars}}
-        }) ->
-    #{ {{#vars}}'{{baseName}}' => {{{nameInCamelCase}}}{{#hasMore}},
-       {{/hasMore}}{{/vars}}
-     }.
+-spec decode(#{binary() => term()}) -> type().
+decode(M) ->
+  scheme_types_utils:map_all(M, fun decode_field/2).
+
+-spec decode_field(binary(), term()) -> {atom(), term()}.
+{{#vars}}decode_field(<<"{{name}}">>, V) ->
+  {'{{name}}', {{#complexType}}{{complexType}}:decode(V){{/complexType}}{{^complexType}}V{{/complexType}}}{{#hasMore}};{{/hasMore}}{{^hasMore}}.{{/hasMore}}
+{{/vars}}
+
+-spec encode(type()) -> #{}.
+encode(M) ->
+  maps:map(fun encode_field/2, M).
+
+-spec encode_field(atom(), term()) -> term().
+{{#vars}}encode_field('{{name}}', V) ->
+  {{#complexType}}{{complexType}}:encode(V){{/complexType}}{{^complexType}}V{{/complexType}}{{#hasMore}};{{/hasMore}}{{^hasMore}}.{{/hasMore}}
+{{/vars}}
+
+{{/isContainer}}
+
+{{#isContainer}}
+-type type() :: list({{{dataType}}}).
+
+-spec decode(list()) -> type().
+decode(V) ->
+    lists:map(fun {{complexType}}:decode/1, V).
+
+-spec encode(type()) -> list().
+encode(V) ->
+    lists:map(fun {{complexType}}:encode/1, V).
+
+{{/isContainer}}
+
 {{/model}}
 {{/models}}

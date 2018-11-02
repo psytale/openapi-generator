@@ -73,7 +73,6 @@ public class ErlangClientCodegen extends DefaultCodegen implements CodegenConfig
         instantiationTypes.clear();
 
         typeMapping.clear();
-        typeMapping.put("enum", "binary()");
         typeMapping.put("date", "calendar:date()");
         typeMapping.put("datetime", "calendar:datetime()");
         typeMapping.put("date-time", "calendar:datetime()");
@@ -106,7 +105,7 @@ public class ErlangClientCodegen extends DefaultCodegen implements CodegenConfig
 
     @Override
     public String getTypeDeclaration(String name) {
-        return name + ":" + name + "()";
+        return name + ":type()";
     }
 
     @Override
@@ -317,6 +316,27 @@ public class ErlangClientCodegen extends DefaultCodegen implements CodegenConfig
             newOs.add(eco);
         }
         operations.put("operation", newOs);
+        return objs;
+    }
+
+    @SuppressWarnings({"static-method", "unchecked"})
+    public Map<String, Object> postProcessAllModels(Map<String, Object> objs) {
+        for (Map.Entry<String, Object> entry : objs.entrySet()) {
+            Map<String, Object> inner = (Map<String, Object>) entry.getValue();
+            List<Map<String, Object>> models = (List<Map<String, Object>>) inner.get("models");
+            for (Map<String, Object> mo : models) {
+                CodegenModel cm = (CodegenModel) mo.get("model");
+
+                for (CodegenProperty property : cm.allVars) {
+                    if (property.complexType != null && property.complexType.startsWith("openapi_")) {
+                        int end = property.complexType.indexOf(":");
+                        property.complexType = property.complexType.substring(0, end);
+                    } else {
+                        property.complexType = null;
+                    }
+                }
+            }
+        }
         return objs;
     }
 
